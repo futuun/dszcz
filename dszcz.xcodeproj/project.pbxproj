@@ -8,18 +8,22 @@
 
 /* Begin PBXBuildFile section */
 		9A83D5582BEB4479000184AD /* dszczApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5572BEB4479000184AD /* dszczApp.swift */; };
-		9A83D55A2BEB4479000184AD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5592BEB4479000184AD /* ContentView.swift */; };
 		9A83D55C2BEB447A000184AD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A83D55B2BEB447A000184AD /* Assets.xcassets */; };
 		9A83D55F2BEB447A000184AD /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A83D55E2BEB447A000184AD /* Preview Assets.xcassets */; };
+		9A83D5672BEB658D000184AD /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5662BEB658D000184AD /* MetalView.swift */; };
+		9A83D5692BEB65C6000184AD /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5682BEB65C6000184AD /* MetalRenderer.swift */; };
+		9A83D56B2BEB70C2000184AD /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D56A2BEB70C2000184AD /* Shaders.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		9A83D5542BEB4479000184AD /* dszcz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dszcz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A83D5572BEB4479000184AD /* dszczApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dszczApp.swift; sourceTree = "<group>"; };
-		9A83D5592BEB4479000184AD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		9A83D55B2BEB447A000184AD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9A83D55E2BEB447A000184AD /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		9A83D5602BEB447A000184AD /* dszcz.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = dszcz.entitlements; sourceTree = "<group>"; };
+		9A83D5662BEB658D000184AD /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
+		9A83D5682BEB65C6000184AD /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
+		9A83D56A2BEB70C2000184AD /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,7 +57,9 @@
 			isa = PBXGroup;
 			children = (
 				9A83D5572BEB4479000184AD /* dszczApp.swift */,
-				9A83D5592BEB4479000184AD /* ContentView.swift */,
+				9A83D5662BEB658D000184AD /* MetalView.swift */,
+				9A83D5682BEB65C6000184AD /* MetalRenderer.swift */,
+				9A83D56A2BEB70C2000184AD /* Shaders.metal */,
 				9A83D55B2BEB447A000184AD /* Assets.xcassets */,
 				9A83D5602BEB447A000184AD /* dszcz.entitlements */,
 				9A83D55D2BEB447A000184AD /* Preview Content */,
@@ -139,8 +145,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9A83D55A2BEB4479000184AD /* ContentView.swift in Sources */,
+				9A83D56B2BEB70C2000184AD /* Shaders.metal in Sources */,
+				9A83D5672BEB658D000184AD /* MetalView.swift in Sources */,
 				9A83D5582BEB4479000184AD /* dszczApp.swift in Sources */,
+				9A83D5692BEB65C6000184AD /* MetalRenderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
