@@ -16,5 +16,5 @@ fragment float4 fragmentShader(
 ) {
     float2 uv = pos.xy / res.xy;
     float3 col = 0.5 + 0.5*cos(time + uv.xyx + float3(0, 2, 4));
-    return float4(col[0], col[1], col[2], 1);
+    return float4(col[0], col[1], col[2], 0.5);
 }

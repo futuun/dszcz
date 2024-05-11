@@ -13,6 +13,7 @@
 		9A83D5672BEB658D000184AD /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5662BEB658D000184AD /* MetalView.swift */; };
 		9A83D5692BEB65C6000184AD /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5682BEB65C6000184AD /* MetalRenderer.swift */; };
 		9A83D56B2BEB70C2000184AD /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D56A2BEB70C2000184AD /* Shaders.metal */; };
+		9A8E65E62BEEDBD100A5BDEF /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8E65E52BEEDBD100A5BDEF /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 		9A83D5662BEB658D000184AD /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		9A83D5682BEB65C6000184AD /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
 		9A83D56A2BEB70C2000184AD /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
+		9A8E65E52BEEDBD100A5BDEF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,6 +61,7 @@
 				9A83D5572BEB4479000184AD /* dszczApp.swift */,
 				9A83D5662BEB658D000184AD /* MetalView.swift */,
 				9A83D5682BEB65C6000184AD /* MetalRenderer.swift */,
+				9A8E65E52BEEDBD100A5BDEF /* AppDelegate.swift */,
 				9A83D56A2BEB70C2000184AD /* Shaders.metal */,
 				9A83D55B2BEB447A000184AD /* Assets.xcassets */,
 				9A83D5602BEB447A000184AD /* dszcz.entitlements */,
@@ -148,6 +151,7 @@
 				9A83D56B2BEB70C2000184AD /* Shaders.metal in Sources */,
 				9A83D5672BEB658D000184AD /* MetalView.swift in Sources */,
 				9A83D5582BEB4479000184AD /* dszczApp.swift in Sources */,
+				9A8E65E62BEEDBD100A5BDEF /* AppDelegate.swift in Sources */,
 				9A83D5692BEB65C6000184AD /* MetalRenderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -285,7 +289,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"dszcz/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_LSUIElement = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -310,7 +314,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"dszcz/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_LSUIElement = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
