@@ -12,9 +12,14 @@ vertex float4 vertexShader(unsigned int vid [[ vertex_id ]]) {
 fragment float4 fragmentShader(
                               float4 pos [[position]],
                               constant float2& res [[buffer(0)]],
-                              constant float& time [[buffer(1)]]
+                              constant float& time [[buffer(1)]],
+                              texture2d<float, access::sample> texture [[texture(0)]]
 ) {
+    constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::linear);
+
     float2 uv = pos.xy / res.xy;
     float3 col = 0.5 + 0.5*cos(time + uv.xyx + float3(0, 2, 4));
-    return float4(col[0], col[1], col[2], 0.5);
+    float4 f = texture.sample(s, uv) - 0.2;
+
+    return float4(f.rgb * col, 1);
 }
