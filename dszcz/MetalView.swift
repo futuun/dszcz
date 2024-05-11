@@ -17,7 +17,6 @@ struct MetalView: NSViewRepresentable {
         mtkView.framebufferOnly = true
         mtkView.enableSetNeedsDisplay = true
         mtkView.isPaused = false
-        mtkView.layer?.isOpaque = false
         mtkView.preferredFramesPerSecond = NSScreen.screens[0].maximumFramesPerSecond
 
         return mtkView

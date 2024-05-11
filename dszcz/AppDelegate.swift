@@ -11,8 +11,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.ignoresMouseEvents = true
             window.hasShadow = false
             window.animationBehavior = .none
-            window.isOpaque = false
-            window.backgroundColor = .clear
         }
     }
 }
