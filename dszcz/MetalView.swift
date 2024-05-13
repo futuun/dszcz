@@ -12,6 +12,7 @@ struct MetalView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> MTKView {
         let mtkView = MTKView()
+        mtkView.presentsWithTransaction = true
         mtkView.delegate = context.coordinator
         mtkView.device = device
         mtkView.framebufferOnly = true

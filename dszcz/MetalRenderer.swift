@@ -112,8 +112,9 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         re.endEncoding()
         
         let drawable = view.currentDrawable!
-        commandBuffer.present(drawable)
         commandBuffer.commit()
+        commandBuffer.waitUntilScheduled()
+        drawable.present()
     }
     
     func updateTime(_ time: Float) {
