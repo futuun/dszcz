@@ -2,49 +2,150 @@ import SwiftUI
 import MetalKit
 import ScreenCaptureKit
 
+struct TextureSize {
+    let width: Int
+    let height: Int
+}
+
+struct ThreadDispatchConfig {
+    let threadgroupsPerGrid: MTLSize
+    let threadsPerThreadgroup: MTLSize
+}
+
 class MetalRenderer: NSObject, MTKViewDelegate {
     var metalDevice: MTLDevice!
     var metalCommandQueue: MTLCommandQueue!
     var pipelineState: MTLRenderPipelineState
-    
+
+    var addDropsComputePipelineState: MTLComputePipelineState
+    var addDropThreadsConfig: ThreadDispatchConfig
+    var moveWavesComputePipelineState: MTLComputePipelineState
+    var moveWavesThreadsConfig: ThreadDispatchConfig
+
+    var dropLocationBuffer: MTLBuffer
     var resolutionBuffer: MTLBuffer
-    var timeBuffer: MTLBuffer
-    
+
     var stream: SCStream?
     var textureCache: CVMetalTextureCache?
     var imgTexture: MTLTexture?
-    
-    private let startDate = Date()
-    
+
+    var rainTexture: [MTLTexture]
+    var activeRainTextureIndex = 0
+    var rainTextureSize: TextureSize
+
     init(_ parent: MetalView) {
         self.metalDevice = parent.device
         self.metalCommandQueue = metalDevice.makeCommandQueue()!
-        
+
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.rasterSampleCount = 1
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-        
-        if let library = self.metalDevice.makeDefaultLibrary() {
-            pipelineDescriptor.vertexFunction = library.makeFunction(name: "vertexShader")
-            pipelineDescriptor.fragmentFunction = library.makeFunction(name: "fragmentShader")
+
+        guard let library = self.metalDevice.makeDefaultLibrary() else {
+            fatalError()
         }
-        
+        pipelineDescriptor.vertexFunction = library.makeFunction(name: "vertexShader")
+        pipelineDescriptor.fragmentFunction = library.makeFunction(name: "fragmentShader")
+
         do {
             try self.pipelineState = self.metalDevice.makeRenderPipelineState(descriptor: pipelineDescriptor)
         } catch {
             fatalError("Cannot create render pipeline")
         }
-        
+
+        do {
+            let addDropsFn = library.makeFunction(name: "addDrops")
+            addDropsComputePipelineState = try self.metalDevice.makeComputePipelineState(function: addDropsFn!)
+
+            let moveWavesFn = library.makeFunction(name: "moveWaves")
+            moveWavesComputePipelineState = try self.metalDevice.makeComputePipelineState(function: moveWavesFn!)
+        } catch {
+            fatalError("Cannot create compute pipeline")
+        }
+
+        dropLocationBuffer = metalDevice.makeBuffer(length: 2 * MemoryLayout<UInt32>.size, options: [])!
         resolutionBuffer = metalDevice.makeBuffer(length: 2 * MemoryLayout<Float>.size, options: [])!
-        timeBuffer = metalDevice.makeBuffer(bytes: [0], length: MemoryLayout<Float>.size, options: [])!
-        
+
+        let frame = NSScreen.main!.frame
+        rainTextureSize = TextureSize(width: Int(frame.width), height: Int(frame.height))
+
+        let threadExecutionWidth = addDropsComputePipelineState.threadExecutionWidth
+
+        addDropThreadsConfig = MetalRenderer.generateThreadDispatchConfig(
+            threadExecutionWidth: threadExecutionWidth,
+            maxTotalThreadsPerThreadgroup: addDropsComputePipelineState.maxTotalThreadsPerThreadgroup,
+            textureSize: rainTextureSize)
+
+        moveWavesThreadsConfig = MetalRenderer.generateThreadDispatchConfig(
+            threadExecutionWidth: threadExecutionWidth,
+            maxTotalThreadsPerThreadgroup: moveWavesComputePipelineState.maxTotalThreadsPerThreadgroup,
+            textureSize: rainTextureSize)
+
+        let textureDescriptorA: MTLTextureDescriptor = MTLTextureDescriptor()
+        textureDescriptorA.pixelFormat = .rgba32Float
+        textureDescriptorA.storageMode = .private
+        textureDescriptorA.usage = [.shaderRead, .shaderWrite]
+        textureDescriptorA.width = rainTextureSize.width
+        textureDescriptorA.height = rainTextureSize.height
+        textureDescriptorA.mipmapLevelCount = 1
+        rainTexture = [
+            self.metalDevice.makeTexture(descriptor: textureDescriptorA)!,
+            self.metalDevice.makeTexture(descriptor: textureDescriptorA)!
+        ]
+
         super.init()
-        
+
         Task {
             try await initScreenStream()
         }
+
+        _ = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.addDrop), userInfo: nil, repeats: true)
     }
-    
+
+    @objc func addDrop() {
+        guard let commandBuffer = metalCommandQueue.makeCommandBuffer(),
+              let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+        else {
+            return
+        }
+
+        computeEncoder.setComputePipelineState(addDropsComputePipelineState)
+        computeEncoder.setTexture(rainTexture[activeRainTextureIndex], index: 0)
+
+        let randomX = UInt32.random(in: 0...UInt32(rainTextureSize.width))
+        let randomY = UInt32.random(in: 0...UInt32(rainTextureSize.height))
+        memcpy(dropLocationBuffer.contents(), [randomX, randomY], MemoryLayout<UInt32>.size * 2)
+
+        computeEncoder.setBuffer(dropLocationBuffer, offset: 0, index: 0)
+
+        computeEncoder.dispatchThreadgroups(
+            addDropThreadsConfig.threadgroupsPerGrid,
+            threadsPerThreadgroup: addDropThreadsConfig.threadsPerThreadgroup)
+
+        computeEncoder.endEncoding()
+        commandBuffer.commit()
+    }
+
+    func moveRipples() {
+        guard let commandBuffer = metalCommandQueue.makeCommandBuffer(),
+              let computeEncoder = commandBuffer.makeComputeCommandEncoder()
+        else {
+            return
+        }
+
+        computeEncoder.setComputePipelineState(moveWavesComputePipelineState)
+
+        computeEncoder.setTexture(rainTexture[activeRainTextureIndex], index: 0)
+        computeEncoder.setTexture(rainTexture[1 - activeRainTextureIndex], index: 1)
+
+        computeEncoder.dispatchThreadgroups(
+            moveWavesThreadsConfig.threadgroupsPerGrid,
+            threadsPerThreadgroup: moveWavesThreadsConfig.threadsPerThreadgroup)
+
+        computeEncoder.endEncoding()
+        commandBuffer.commit()
+    }
+
     func initScreenStream() async throws {
         CVMetalTextureCacheCreate(nil, nil, metalDevice, nil, &textureCache)
         
@@ -53,7 +154,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         guard let display = sharableContent.displays.first(where: { $0.displayID == displayID }) else {
             fatalError("Can't find display with ID \(displayID) in sharable content")
         }
-
+        
         let excludedWindows = sharableContent.windows.filter { window in
             window.owningApplication?.bundleIdentifier == Bundle.main.bundleIdentifier
         }
@@ -65,11 +166,14 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         )
         let configuration = SCStreamConfiguration()
         let cr = NSScreen.main!.frame
+        let scaleFactor = NSScreen.main!.backingScaleFactor
+
         configuration.sourceRect = CGRect(x: 0, y: 0, width: cr.width, height: cr.height)
-        configuration.width = Int(cr.width * 2)
-        configuration.height = Int(cr.height * 2)
+        configuration.width = Int(cr.width * scaleFactor)
+        configuration.height = Int(cr.height * scaleFactor)
         configuration.showsCursor = false
         configuration.capturesAudio = false
+        configuration.captureResolution = .best
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         
         stream = SCStream(filter: filter, configuration: configuration, delegate: self)
@@ -77,7 +181,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         
         startStream()
     }
-    
+
     func startStream() {
         stream!.startCapture() { err in
             if err != nil {
@@ -85,15 +189,15 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             }
         }
     }
-    
+
     func stopStream() {
         stream!.stopCapture()
     }
-    
+
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         memcpy(resolutionBuffer.contents(), [Float(size.width), Float(size.height)], MemoryLayout<Float>.size * 2)
     }
-    
+
     func draw(in view: MTKView) {
         guard let rpd = view.currentRenderPassDescriptor,
               let commandBuffer = metalCommandQueue.makeCommandBuffer(),
@@ -101,12 +205,13 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         else {
             return
         }
-        updateTime(Float(Date().timeIntervalSince(startDate)))
+
+        moveRipples()
         
         re.setRenderPipelineState(pipelineState)
         re.setFragmentBuffer(resolutionBuffer, offset: 0, index: 0)
-        re.setFragmentBuffer(timeBuffer, offset: 0, index: 1)
         re.setFragmentTexture(imgTexture, index: 0)
+        re.setFragmentTexture(rainTexture[activeRainTextureIndex], index: 1)
         re.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: 1)
         
         re.endEncoding()
@@ -115,10 +220,24 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         commandBuffer.commit()
         commandBuffer.waitUntilScheduled()
         drawable.present()
+
+        activeRainTextureIndex = 1 - activeRainTextureIndex
     }
-    
-    func updateTime(_ time: Float) {
-        timeBuffer.contents().bindMemory(to: Float.self, capacity: 1)[0] = time
+
+    static func generateThreadDispatchConfig(
+        threadExecutionWidth: Int,
+        maxTotalThreadsPerThreadgroup: Int,
+        textureSize: TextureSize
+    ) -> ThreadDispatchConfig {
+        let threadsPerGroup = maxTotalThreadsPerThreadgroup / threadExecutionWidth
+
+        return ThreadDispatchConfig(
+            threadgroupsPerGrid: MTLSizeMake(
+                (threadExecutionWidth + textureSize.width - 1) / threadExecutionWidth,
+                (threadsPerGroup + textureSize.height - 1) / threadsPerGroup,
+                1),
+            threadsPerThreadgroup: MTLSizeMake(threadExecutionWidth, threadsPerGroup, 1)
+        )
     }
 }
 
@@ -133,7 +252,7 @@ extension MetalRenderer: SCStreamDelegate, SCStreamOutput {
             fatalError("Only video sample can be handled")
         }
     }
-
+    
     func handleLatestScreenSample(sampleBuffer: CMSampleBuffer) {
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return
