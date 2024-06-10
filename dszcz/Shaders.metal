@@ -14,24 +14,33 @@ vertexShader(unsigned int vid [[ vertex_id ]]) {
 fragment float4
 fragmentShader(
                float4 pos [[position]],
-               constant float2& res [[buffer(0)]],
-               constant float& time [[buffer(1)]],
                texture2d<float, access::sample> screenTexture [[texture(0)]],
                texture2d<float, access::sample> rainTexture [[texture(1)]]
 ) {
     constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::linear);
 
-    float2 uv = pos.xy / res.xy;
+    float2 screenTextureRes = float2(screenTexture.get_width(), screenTexture.get_height());
+    float2 rainTextureRes = float2(rainTexture.get_width(), rainTexture.get_height());
 
-    float4 f = screenTexture.sample(s, uv);
-    float4 g = rainTexture.sample(s, uv);
+    float2 uv = pos.xy / screenTextureRes;
+    float2 delta = 1.0 / rainTextureRes;
 
-    return float4(f.rgb * (1 - g.b), 1);
+    float height = rainTexture.sample(s, uv.xy).b;
+    float heightX = rainTexture.sample(s, float2(uv.x - delta.x, uv.y)).b;
+    float heightY = rainTexture.sample(s, float2(uv.x, uv.y - delta.y)).b;
+
+    float3 dx = float3(delta.x, heightX - height, 0.0);
+    float3 dy = float3(0.0, heightY - height, delta.y);
+    float2 offset = -normalize(cross(dy, dx)).xz;
+    float specular = pow(max(0.0, dot(offset, normalize(float2(-0.6, 1.0)))), 4.0);
+
+    float4 f = screenTexture.sample(s, uv + (offset * delta));
+
+    return f  + specular + (height * 4);
 }
 
-
 constant float dropRadius = 20.0;
-constant float strength = 0.14;
+constant float strength = 0.01;
 
 kernel void
 addDrops(

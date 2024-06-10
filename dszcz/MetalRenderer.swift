@@ -23,7 +23,6 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     var moveWavesThreadsConfig: ThreadDispatchConfig
 
     var dropLocationBuffer: MTLBuffer
-    var resolutionBuffer: MTLBuffer
 
     var stream: SCStream?
     var textureCache: CVMetalTextureCache?
@@ -48,7 +47,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         pipelineDescriptor.fragmentFunction = library.makeFunction(name: "fragmentShader")
 
         do {
-            try self.pipelineState = self.metalDevice.makeRenderPipelineState(descriptor: pipelineDescriptor)
+            try pipelineState = self.metalDevice.makeRenderPipelineState(descriptor: pipelineDescriptor)
         } catch {
             fatalError("Cannot create render pipeline")
         }
@@ -64,7 +63,6 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         }
 
         dropLocationBuffer = metalDevice.makeBuffer(length: 2 * MemoryLayout<UInt32>.size, options: [])!
-        resolutionBuffer = metalDevice.makeBuffer(length: 2 * MemoryLayout<Float>.size, options: [])!
 
         let frame = NSScreen.main!.frame
         rainTextureSize = TextureSize(width: Int(frame.width), height: Int(frame.height))
@@ -100,6 +98,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         }
 
         _ = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.addDrop), userInfo: nil, repeats: true)
+        _ = Timer.scheduledTimer(timeInterval: 1/120, target: self, selector: #selector(self.moveRipples), userInfo: nil, repeats: true)
     }
 
     @objc func addDrop() {
@@ -126,7 +125,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         commandBuffer.commit()
     }
 
-    func moveRipples() {
+    @objc func moveRipples() {
         guard let commandBuffer = metalCommandQueue.makeCommandBuffer(),
               let computeEncoder = commandBuffer.makeComputeCommandEncoder()
         else {
@@ -144,6 +143,8 @@ class MetalRenderer: NSObject, MTKViewDelegate {
 
         computeEncoder.endEncoding()
         commandBuffer.commit()
+
+        activeRainTextureIndex = 1 - activeRainTextureIndex
     }
 
     func initScreenStream() async throws {
@@ -195,7 +196,6 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        memcpy(resolutionBuffer.contents(), [Float(size.width), Float(size.height)], MemoryLayout<Float>.size * 2)
     }
 
     func draw(in view: MTKView) {
@@ -205,11 +205,8 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         else {
             return
         }
-
-        moveRipples()
         
         re.setRenderPipelineState(pipelineState)
-        re.setFragmentBuffer(resolutionBuffer, offset: 0, index: 0)
         re.setFragmentTexture(imgTexture, index: 0)
         re.setFragmentTexture(rainTexture[activeRainTextureIndex], index: 1)
         re.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: 1)
@@ -220,8 +217,6 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         commandBuffer.commit()
         commandBuffer.waitUntilScheduled()
         drawable.present()
-
-        activeRainTextureIndex = 1 - activeRainTextureIndex
     }
 
     static func generateThreadDispatchConfig(
