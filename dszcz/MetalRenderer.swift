@@ -22,7 +22,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     var moveWavesComputePipelineState: MTLComputePipelineState
     var moveWavesThreadsConfig: ThreadDispatchConfig
 
-    var dropLocationBuffer: MTLBuffer
+    var dropletBuffer: MTLBuffer
 
     var stream: SCStream?
     var textureCache: CVMetalTextureCache?
@@ -62,7 +62,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             fatalError("Cannot create compute pipeline")
         }
 
-        dropLocationBuffer = metalDevice.makeBuffer(length: 2 * MemoryLayout<UInt32>.size, options: [])!
+        dropletBuffer = metalDevice.makeBuffer(length: MemoryLayout<UInt16>.size * 4, options: [])!
 
         let frame = NSScreen.screens[0].frame
         let scaleFactor = NSScreen.screens[0].backingScaleFactor
@@ -98,7 +98,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             try await initScreenStream()
         }
 
-        _ = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.addDrop), userInfo: nil, repeats: true)
+        _ = Timer.scheduledTimer(timeInterval: 1/10, target: self, selector: #selector(self.addDrop), userInfo: nil, repeats: true)
         _ = Timer.scheduledTimer(timeInterval: 1/120, target: self, selector: #selector(self.moveRipples), userInfo: nil, repeats: true)
     }
 
@@ -112,11 +112,13 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         computeEncoder.setComputePipelineState(addDropsComputePipelineState)
         computeEncoder.setTexture(rainTexture[activeRainTextureIndex], index: 0)
 
-        let randomX = UInt32.random(in: 0...UInt32(rainTextureSize.width))
-        let randomY = UInt32.random(in: 0...UInt32(rainTextureSize.height))
-        memcpy(dropLocationBuffer.contents(), [randomX, randomY], MemoryLayout<UInt32>.size * 2)
+        let randomX = UInt16.random(in: 0...UInt16(rainTextureSize.width))
+        let randomY = UInt16.random(in: 0...UInt16(rainTextureSize.height))
+        let randomRadius = UInt16.random(in: 1...30)
+        let randomStrength = UInt16.random(in: 8...12)
+        memcpy(dropletBuffer.contents(), [randomX, randomY, randomRadius, randomStrength], MemoryLayout<UInt16>.size * 4)
 
-        computeEncoder.setBuffer(dropLocationBuffer, offset: 0, index: 0)
+        computeEncoder.setBuffer(dropletBuffer, offset: 0, index: 0)
 
         computeEncoder.dispatchThreadgroups(
             addDropThreadsConfig.threadgroupsPerGrid,

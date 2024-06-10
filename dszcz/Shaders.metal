@@ -39,23 +39,25 @@ fragmentShader(
     return f  + specular + (height * 4);
 }
 
-constant float dropRadius = 20.0;
-constant float strength = 0.01;
 
 kernel void
 addDrops(
-         constant uint2& dropLocation [[buffer(0)]],
+         constant ushort4& dropConfig [[buffer(0)]],
          texture2d<float, access::read_write> outTexture [[texture(0)]],
          uint2 gid [[thread_position_in_grid]]
 ) {
     if((gid.x >= outTexture.get_width()) || (gid.y >= outTexture.get_height())) {
         return;
     }
+    
+    ushort2 dropLocation = dropConfig.xy;
+    float dropRadius = dropConfig.z;
+    float dropStrength = float(dropConfig.w) / 1000;
 
     float4 currPixel = outTexture.read(gid);
     float drop = max(0.0, 1.0 - (length(float2(gid) - float2(dropLocation)) / dropRadius));
     drop = 1 - cos(drop * M_PI_F);
-    currPixel.r += drop * strength;
+    currPixel.r += drop * dropStrength;
 
     outTexture.write(currPixel, gid);
 }
