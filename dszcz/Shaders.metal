@@ -25,9 +25,9 @@ fragmentShader(
     float2 uv = pos.xy / screenTextureRes;
     float2 delta = 1.0 / rainTextureRes;
 
-    float height = rainTexture.sample(s, uv.xy).b;
-    float heightX = rainTexture.sample(s, float2(uv.x - delta.x, uv.y)).b;
-    float heightY = rainTexture.sample(s, float2(uv.x, uv.y - delta.y)).b;
+    float height = rainTexture.sample(s, uv.xy).r;
+    float heightX = rainTexture.sample(s, float2(uv.x - delta.x, uv.y)).r;
+    float heightY = rainTexture.sample(s, float2(uv.x, uv.y - delta.y)).r;
 
     float3 dx = float3(delta.x, heightX - height, 0.0);
     float3 dy = float3(0.0, heightY - height, delta.y);
@@ -51,11 +51,11 @@ addDrops(
     if((gid.x >= outTexture.get_width()) || (gid.y >= outTexture.get_height())) {
         return;
     }
-    
+
     float4 currPixel = outTexture.read(gid);
     float drop = max(0.0, 1.0 - (length(float2(gid) - float2(dropLocation)) / dropRadius));
     drop = 1 - cos(drop * M_PI_F);
-    currPixel.b += drop * strength;
+    currPixel.r += drop * strength;
 
     outTexture.write(currPixel, gid);
 }
@@ -70,19 +70,19 @@ moveWaves(
           uint2 gid [[thread_position_in_grid]]
 ) {
     float4 currPixel = outTexture.read(gid);
-    
+
     uint2 dx = uint2(1, 0);
     uint2 dy = uint2(0, 1);
 
     float next = (
-                   inTexture.read(gid - dx).b +
-                   inTexture.read(gid + dx).b +
-                   inTexture.read(gid - dy).b +
-                   inTexture.read(gid + dy).b
-    ) / 2 - currPixel.b;
+                   inTexture.read(gid - dx).r +
+                   inTexture.read(gid + dx).r +
+                   inTexture.read(gid - dy).r +
+                   inTexture.read(gid + dy).r
+    ) / 2 - currPixel.r;
     next = next * damping;
-    
-    currPixel.b = next;
+
+    currPixel.r = next;
 
     outTexture.write(currPixel, gid);
 }

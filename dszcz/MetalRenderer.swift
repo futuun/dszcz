@@ -81,7 +81,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             textureSize: rainTextureSize)
 
         let textureDescriptorA: MTLTextureDescriptor = MTLTextureDescriptor()
-        textureDescriptorA.pixelFormat = .rgba32Float
+        textureDescriptorA.pixelFormat = .r16Float
         textureDescriptorA.storageMode = .private
         textureDescriptorA.usage = [.shaderRead, .shaderWrite]
         textureDescriptorA.width = rainTextureSize.width
