@@ -64,8 +64,9 @@ class MetalRenderer: NSObject, MTKViewDelegate {
 
         dropLocationBuffer = metalDevice.makeBuffer(length: 2 * MemoryLayout<UInt32>.size, options: [])!
 
-        let frame = NSScreen.main!.frame
-        rainTextureSize = TextureSize(width: Int(frame.width), height: Int(frame.height))
+        let frame = NSScreen.screens[0].frame
+        let scaleFactor = NSScreen.screens[0].backingScaleFactor
+        rainTextureSize = TextureSize(width: Int(frame.width * scaleFactor), height: Int(frame.height * scaleFactor))
 
         let threadExecutionWidth = addDropsComputePipelineState.threadExecutionWidth
 
@@ -149,13 +150,10 @@ class MetalRenderer: NSObject, MTKViewDelegate {
 
     func initScreenStream() async throws {
         CVMetalTextureCacheCreate(nil, nil, metalDevice, nil, &textureCache)
-        
-        let displayID: CGDirectDisplayID = CGMainDisplayID()
+
         let sharableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-        guard let display = sharableContent.displays.first(where: { $0.displayID == displayID }) else {
-            fatalError("Can't find display with ID \(displayID) in sharable content")
-        }
-        
+        let display = sharableContent.displays[0]
+
         let excludedWindows = sharableContent.windows.filter { window in
             window.owningApplication?.bundleIdentifier == Bundle.main.bundleIdentifier
         }
@@ -166,8 +164,8 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             exceptingWindows: excludedWindows
         )
         let configuration = SCStreamConfiguration()
-        let cr = NSScreen.main!.frame
-        let scaleFactor = NSScreen.main!.backingScaleFactor
+        let cr = NSScreen.screens[0].frame
+        let scaleFactor = NSScreen.screens[0].backingScaleFactor
 
         configuration.sourceRect = CGRect(x: 0, y: 0, width: cr.width, height: cr.height)
         configuration.width = Int(cr.width * scaleFactor)
