@@ -2,29 +2,21 @@ import SwiftUI
 
 @main
 struct rainApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @State var window: NSWindow?
 
-    @Environment(\.openWindow) private var openWindow
-    @Environment(\.dismissWindow) private var dismissWindow
-
-    @State public var overlayOpen: Bool = true
-
-    var screenFrame = NSScreen.main!.frame
-
+    @State public var overlayOpen: Bool = false
+    
     var body: some Scene {
-        Window("Dszcz", id: "main") {
-            MetalView()
-                .frame(width: screenFrame.width, height: screenFrame.height)
-        }
-            .defaultPosition(UnitPoint(x: 0, y: 1))
         MenuBarExtra("Dszcz", systemImage: overlayOpen ? "cloud.rain": "cloud") {
             Button("Toggle overlay") {
                 if overlayOpen {
-                    withTransaction(\.dismissBehavior, .destructive) {
-                        dismissWindow(id: "main")
-                    }
+                    self.window?.contentView = nil
+                    self.window?.close()
                 } else {
-                    openWindow(id: "main")
+                    let window = OverlayWindow()
+                    window.contentView = NSHostingView(rootView: MetalView())
+
+                    self.window = window
                 }
 
                 overlayOpen.toggle()

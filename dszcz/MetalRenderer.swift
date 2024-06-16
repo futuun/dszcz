@@ -32,6 +32,9 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     var activeRainTextureIndex = 0
     var rainTextureSize: TextureSize
 
+    var timers: [Timer] = []
+    private let videoSampleBufferQueue = DispatchQueue(label: "com.futuun.VideoSampleBufferQueue")
+
     init(_ parent: MetalView) {
         self.metalDevice = parent.device
         self.metalCommandQueue = metalDevice.makeCommandQueue()!
@@ -91,6 +94,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             self.metalDevice.makeTexture(descriptor: textureDescriptorA)!,
             self.metalDevice.makeTexture(descriptor: textureDescriptorA)!
         ]
+        imgTexture = self.metalDevice.makeTexture(descriptor: textureDescriptorA)!
 
         super.init()
 
@@ -98,8 +102,23 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             try await initScreenStream()
         }
 
-        _ = Timer.scheduledTimer(timeInterval: 1/10, target: self, selector: #selector(self.addDrop), userInfo: nil, repeats: true)
-        _ = Timer.scheduledTimer(timeInterval: 1/120, target: self, selector: #selector(self.moveRipples), userInfo: nil, repeats: true)
+        timers.append(
+            Timer.scheduledTimer(timeInterval: 1/20, target: self, selector: #selector(self.addDrop), userInfo: nil, repeats: true)
+        )
+        timers.append(
+            Timer.scheduledTimer(timeInterval: 1/120, target: self, selector: #selector(self.moveRipples), userInfo: nil, repeats: true)
+        )
+
+        timers.forEach { timer in
+            RunLoop.current.add(timer, forMode: .common)
+        }
+    }
+
+    func stopTimers() {
+        timers.forEach { timer in
+            timer.invalidate()
+        }
+        timers.removeAll()
     }
 
     @objc func addDrop() {
@@ -158,8 +177,9 @@ class MetalRenderer: NSObject, MTKViewDelegate {
 
         let excludedWindows = sharableContent.windows.filter { window in
             window.owningApplication?.bundleIdentifier == Bundle.main.bundleIdentifier
+            && window.title == "OverlayWindow"
         }
-        
+
         let filter = SCContentFilter(
             display: display,
             excludingApplications: [],
@@ -174,11 +194,11 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         configuration.height = Int(cr.height * scaleFactor)
         configuration.showsCursor = false
         configuration.capturesAudio = false
-        configuration.captureResolution = .best
+        configuration.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(NSScreen.screens[0].maximumFramesPerSecond))
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         
         stream = SCStream(filter: filter, configuration: configuration, delegate: self)
-        try stream!.addStreamOutput(self, type: .screen, sampleHandlerQueue: nil)
+        try stream!.addStreamOutput(self, type: .screen, sampleHandlerQueue: videoSampleBufferQueue)
         
         startStream()
     }
@@ -238,6 +258,10 @@ class MetalRenderer: NSObject, MTKViewDelegate {
 
 extension MetalRenderer: SCStreamDelegate, SCStreamOutput {
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
+        if !sampleBuffer.isValid {
+            return
+        }
+
         switch type {
         case .screen:
             handleLatestScreenSample(sampleBuffer: sampleBuffer)
@@ -252,9 +276,10 @@ extension MetalRenderer: SCStreamDelegate, SCStreamOutput {
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return
         }
+
         let width = CVPixelBufferGetWidth(imageBuffer)
         let height = CVPixelBufferGetHeight(imageBuffer)
-        
+
         var imageTexture: CVMetalTexture?
         let result = CVMetalTextureCacheCreateTextureFromImage(nil,
                                                                textureCache!,
@@ -265,13 +290,14 @@ extension MetalRenderer: SCStreamDelegate, SCStreamOutput {
                                                                height,
                                                                0,
                                                                &imageTexture)
-        
-        guard let unwrappedImageTexture = imageTexture,
-              let texture = CVMetalTextureGetTexture(unwrappedImageTexture),
-              result == kCVReturnSuccess else {
+
+        guard result == kCVReturnSuccess,
+              let unwrappedImageTexture = imageTexture,
+              let texture = CVMetalTextureGetTexture(unwrappedImageTexture)
+        else {
             return
         }
-        
+
         imgTexture = texture
     }
 }

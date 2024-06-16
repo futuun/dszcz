@@ -13,7 +13,7 @@
 		9A83D5672BEB658D000184AD /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5662BEB658D000184AD /* MetalView.swift */; };
 		9A83D5692BEB65C6000184AD /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5682BEB65C6000184AD /* MetalRenderer.swift */; };
 		9A83D56B2BEB70C2000184AD /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D56A2BEB70C2000184AD /* Shaders.metal */; };
-		9A8E65E62BEEDBD100A5BDEF /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8E65E52BEEDBD100A5BDEF /* AppDelegate.swift */; };
+		9AEE215C2C1F81CD00644D1C /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AEE215B2C1F81CD00644D1C /* OverlayWindow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,7 +25,7 @@
 		9A83D5662BEB658D000184AD /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		9A83D5682BEB65C6000184AD /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
 		9A83D56A2BEB70C2000184AD /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
-		9A8E65E52BEEDBD100A5BDEF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		9AEE215B2C1F81CD00644D1C /* OverlayWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OverlayWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,7 +61,7 @@
 				9A83D5572BEB4479000184AD /* dszczApp.swift */,
 				9A83D5662BEB658D000184AD /* MetalView.swift */,
 				9A83D5682BEB65C6000184AD /* MetalRenderer.swift */,
-				9A8E65E52BEEDBD100A5BDEF /* AppDelegate.swift */,
+				9AEE215B2C1F81CD00644D1C /* OverlayWindow.swift */,
 				9A83D56A2BEB70C2000184AD /* Shaders.metal */,
 				9A83D55B2BEB447A000184AD /* Assets.xcassets */,
 				9A83D5602BEB447A000184AD /* dszcz.entitlements */,
@@ -151,7 +151,7 @@
 				9A83D56B2BEB70C2000184AD /* Shaders.metal in Sources */,
 				9A83D5672BEB658D000184AD /* MetalView.swift in Sources */,
 				9A83D5582BEB4479000184AD /* dszczApp.swift in Sources */,
-				9A8E65E62BEEDBD100A5BDEF /* AppDelegate.swift in Sources */,
+				9AEE215C2C1F81CD00644D1C /* OverlayWindow.swift in Sources */,
 				9A83D5692BEB65C6000184AD /* MetalRenderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -211,6 +211,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -268,6 +269,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
 				MTL_ENABLE_DEBUG_INFO = NO;

@@ -4,7 +4,15 @@ import SwiftUI
 struct MetalView: NSViewRepresentable {
     let device = MTLCreateSystemDefaultDevice()
 
-    func updateNSView(_ nsView: NSViewType, context: NSViewRepresentableContext<MetalView>) {}
+    public typealias NSViewType = MTKView
+
+    static func dismantleNSView(_ nsView: MTKView, coordinator: MetalRenderer) {
+        coordinator.stopStream()
+        coordinator.stopTimers()
+    }
+
+    func updateNSView(_ nsView: NSViewType, context: Context) {
+    }
 
     func makeCoordinator() -> MetalRenderer {
         MetalRenderer(self)
