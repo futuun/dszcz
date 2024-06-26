@@ -69,6 +69,17 @@ class CaptureEngine {
         stream?.stopCapture()
         streamOutput.continuation?.finish()
     }
+    
+    static var canRecord: Bool {
+        get async {
+            do {
+                try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+                return true
+            } catch {
+                return false
+            }
+        }
+    }
 }
 
 private class CaptureEngineStreamOutput: NSObject, SCStreamDelegate, SCStreamOutput {
