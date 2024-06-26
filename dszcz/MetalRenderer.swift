@@ -53,8 +53,8 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         }
 
         do {
-            let addDropsFn = library.makeFunction(name: "addDrops")
-            addDropsComputePipelineState = try self.metalDevice.makeComputePipelineState(function: addDropsFn!)
+            let addDropFn = library.makeFunction(name: "addDrop")
+            addDropsComputePipelineState = try self.metalDevice.makeComputePipelineState(function: addDropFn!)
 
             let moveWavesFn = library.makeFunction(name: "moveWaves")
             moveWavesComputePipelineState = try self.metalDevice.makeComputePipelineState(function: moveWavesFn!)
@@ -105,7 +105,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             Timer.scheduledTimer(timeInterval: 1/20, target: self, selector: #selector(self.addDrop), userInfo: nil, repeats: true)
         )
         timers.append(
-            Timer.scheduledTimer(timeInterval: 1/120, target: self, selector: #selector(self.moveRipples), userInfo: nil, repeats: true)
+            Timer.scheduledTimer(timeInterval: 1/120, target: self, selector: #selector(self.moveWaves), userInfo: nil, repeats: true)
         )
 
         timers.forEach { timer in
@@ -160,7 +160,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         commandBuffer.commit()
     }
 
-    @objc func moveRipples() {
+    @objc func moveWaves() {
         guard let commandBuffer = metalCommandQueue.makeCommandBuffer(),
               let computeEncoder = commandBuffer.makeComputeCommandEncoder()
         else {

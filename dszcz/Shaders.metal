@@ -41,10 +41,10 @@ fragmentShader(
 
 
 kernel void
-addDrops(
-         constant ushort4& dropConfig [[buffer(0)]],
-         texture2d<float, access::read_write> outTexture [[texture(0)]],
-         uint2 gid [[thread_position_in_grid]]
+addDrop(
+        constant ushort4& dropConfig [[buffer(0)]],
+        texture2d<float, access::read_write> outTexture [[texture(0)]],
+        uint2 gid [[thread_position_in_grid]]
 ) {
     if((gid.x >= outTexture.get_width()) || (gid.y >= outTexture.get_height())) {
         return;
