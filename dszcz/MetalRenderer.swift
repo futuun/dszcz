@@ -1,6 +1,4 @@
-import SwiftUI
 import MetalKit
-import ScreenCaptureKit
 
 struct TextureSize {
     let width: Int
@@ -24,8 +22,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
 
     var dropletBuffer: MTLBuffer
 
-    var stream: SCStream?
-    var textureCache: CVMetalTextureCache?
+    var captureEngine: CaptureEngine
     var imgTexture: MTLTexture?
 
     var rainTexture: [MTLTexture]
@@ -95,11 +92,13 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             self.metalDevice.makeTexture(descriptor: textureDescriptorA)!
         ]
         imgTexture = self.metalDevice.makeTexture(descriptor: textureDescriptorA)!
+        
+        captureEngine = CaptureEngine(metalDevice: self.metalDevice)
 
         super.init()
 
         Task {
-            try await initScreenStream()
+            await startCapture()
         }
 
         timers.append(
@@ -113,12 +112,26 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             RunLoop.current.add(timer, forMode: .common)
         }
     }
+    
+    func startCapture() async {
+        do {
+            for try await frame in await captureEngine.startStream() {
+                imgTexture = frame
+            }
+        } catch {
+            print("\(error.localizedDescription)")
+        }
+    }
 
     func stopTimers() {
         timers.forEach { timer in
             timer.invalidate()
         }
         timers.removeAll()
+    }
+    
+    func stopStream() {
+        captureEngine.stopStream()
     }
 
     @objc func addDrop() {
@@ -169,52 +182,6 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         activeRainTextureIndex = 1 - activeRainTextureIndex
     }
 
-    func initScreenStream() async throws {
-        CVMetalTextureCacheCreate(nil, nil, metalDevice, nil, &textureCache)
-
-        let sharableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-        let display = sharableContent.displays[0]
-
-        let excludedWindows = sharableContent.windows.filter { window in
-            window.owningApplication?.bundleIdentifier == Bundle.main.bundleIdentifier
-            && window.title == "OverlayWindow"
-        }
-
-        let filter = SCContentFilter(
-            display: display,
-            excludingApplications: [],
-            exceptingWindows: excludedWindows
-        )
-        let configuration = SCStreamConfiguration()
-        let cr = NSScreen.screens[0].frame
-        let scaleFactor = NSScreen.screens[0].backingScaleFactor
-
-        configuration.sourceRect = CGRect(x: 0, y: 0, width: cr.width, height: cr.height)
-        configuration.width = Int(cr.width * scaleFactor)
-        configuration.height = Int(cr.height * scaleFactor)
-        configuration.showsCursor = false
-        configuration.capturesAudio = false
-        configuration.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(NSScreen.screens[0].maximumFramesPerSecond))
-        configuration.pixelFormat = kCVPixelFormatType_32BGRA
-        
-        stream = SCStream(filter: filter, configuration: configuration, delegate: self)
-        try stream!.addStreamOutput(self, type: .screen, sampleHandlerQueue: videoSampleBufferQueue)
-        
-        startStream()
-    }
-
-    func startStream() {
-        stream!.startCapture() { err in
-            if err != nil {
-                fatalError("Couldn't start stream capture \(String(describing: err))")
-            }
-        }
-    }
-
-    func stopStream() {
-        stream!.stopCapture()
-    }
-
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
     }
 
@@ -253,51 +220,5 @@ class MetalRenderer: NSObject, MTKViewDelegate {
                 1),
             threadsPerThreadgroup: MTLSizeMake(threadExecutionWidth, threadsPerGroup, 1)
         )
-    }
-}
-
-extension MetalRenderer: SCStreamDelegate, SCStreamOutput {
-    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        if !sampleBuffer.isValid {
-            return
-        }
-
-        switch type {
-        case .screen:
-            handleLatestScreenSample(sampleBuffer: sampleBuffer)
-        case .audio:
-            fatalError("Audio sample could not be")
-        @unknown default:
-            fatalError("Only video sample can be handled")
-        }
-    }
-    
-    func handleLatestScreenSample(sampleBuffer: CMSampleBuffer) {
-        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
-            return
-        }
-
-        let width = CVPixelBufferGetWidth(imageBuffer)
-        let height = CVPixelBufferGetHeight(imageBuffer)
-
-        var imageTexture: CVMetalTexture?
-        let result = CVMetalTextureCacheCreateTextureFromImage(nil,
-                                                               textureCache!,
-                                                               imageBuffer,
-                                                               nil,
-                                                               .bgra8Unorm,
-                                                               width,
-                                                               height,
-                                                               0,
-                                                               &imageTexture)
-
-        guard result == kCVReturnSuccess,
-              let unwrappedImageTexture = imageTexture,
-              let texture = CVMetalTextureGetTexture(unwrappedImageTexture)
-        else {
-            return
-        }
-
-        imgTexture = texture
     }
 }
