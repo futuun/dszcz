@@ -1,5 +1,6 @@
 Create rain overlay on your mac!
-![](https://github.com/futuun/dszcz/assets/15254260/da70a993-9cb6-4c1d-91a4-887488cf4d3d)
+
+https://github.com/futuun/dszcz/assets/15254260/23e8e3af-fa9d-433d-a0b1-9a765c8808b6
 
 ### How does it work?
 
