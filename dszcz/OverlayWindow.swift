@@ -20,6 +20,8 @@ final class OverlayWindow: NSWindow {
         self.hasShadow = false
         self.isReleasedWhenClosed = false
         self.title = "OverlayWindow"
+        self.isOpaque = false
+        self.backgroundColor = .clear
 
         self.makeKeyAndOrderFront(nil)
     }
