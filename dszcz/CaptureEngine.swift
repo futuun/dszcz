@@ -13,8 +13,12 @@ class CaptureEngine {
         get async {
             do {
                 let sharableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-                let display = sharableContent.displays[0]
-                
+
+                let frame = NSScreen.screens[0].frame
+                let display = sharableContent.displays.first { currDisplay in
+                    CGRectEqualToRect(currDisplay.frame, frame)
+                }!
+
                 let excludedWindows = sharableContent.windows.filter { window in
                     window.owningApplication?.bundleIdentifier == Bundle.main.bundleIdentifier
                     && window.title == "OverlayWindow"
