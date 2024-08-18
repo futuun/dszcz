@@ -91,7 +91,6 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             self.metalDevice.makeTexture(descriptor: textureDescriptorA)!,
             self.metalDevice.makeTexture(descriptor: textureDescriptorA)!
         ]
-        imgTexture = self.metalDevice.makeTexture(descriptor: textureDescriptorA)!
         
         captureEngine = CaptureEngine(metalDevice: self.metalDevice)
 
@@ -186,7 +185,8 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
-        guard let rpd = view.currentRenderPassDescriptor,
+        guard imgTexture != nil,
+              let rpd = view.currentRenderPassDescriptor,
               let commandBuffer = metalCommandQueue.makeCommandBuffer(),
               let re = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
         else {
