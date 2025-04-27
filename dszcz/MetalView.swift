@@ -25,9 +25,6 @@ struct MetalView: NSViewRepresentable {
         mtkView.presentsWithTransaction = true
         mtkView.delegate = context.coordinator
         mtkView.device = device
-        mtkView.framebufferOnly = true
-        mtkView.enableSetNeedsDisplay = true
-        mtkView.isPaused = false
         mtkView.preferredFramesPerSecond = NSScreen.screens[0].maximumFramesPerSecond
 
         return mtkView

@@ -20,8 +20,9 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     var addDropThreadsConfig: ThreadDispatchConfig
     var moveWavesComputePipelineState: MTLComputePipelineState
     var moveWavesThreadsConfig: ThreadDispatchConfig
+    var shouldMoveWavesTwice: Bool = NSScreen.screens[0].maximumFramesPerSecond == 60
 
-    var dropletBuffer: MTLBuffer
+    var dropletsBuffer: MTLBuffer
 
     var captureEngine: CaptureEngine
     var imgTexture: MTLTexture?
@@ -31,6 +32,9 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     var rainTextureSize: TextureSize
 
     var timers: [Timer] = []
+
+    private var shouldAddDrop = true
+    private let dropsPerPass = Int(DROPS_PER_PASS)
 
     init(_ parent: MetalView) {
         self.overlayState = parent.overlayState
@@ -54,8 +58,8 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         }
 
         do {
-            let addDropFn = library.makeFunction(name: "addDrop")
-            addDropsComputePipelineState = try self.metalDevice.makeComputePipelineState(function: addDropFn!)
+            let addDropsFn = library.makeFunction(name: "addDrops")
+            addDropsComputePipelineState = try self.metalDevice.makeComputePipelineState(function: addDropsFn!)
 
             let moveWavesFn = library.makeFunction(name: "moveWaves")
             moveWavesComputePipelineState = try self.metalDevice.makeComputePipelineState(function: moveWavesFn!)
@@ -63,7 +67,7 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             fatalError("Cannot create compute pipeline")
         }
 
-        dropletBuffer = metalDevice.makeBuffer(length: MemoryLayout<UInt16>.size * 4, options: [])!
+        dropletsBuffer = metalDevice.makeBuffer(length: MemoryLayout<UInt16>.size * 4 * dropsPerPass, options: [])!
 
         let frame = NSScreen.screens[0].frame
         let scaleFactor = NSScreen.screens[0].backingScaleFactor
@@ -102,15 +106,10 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         }
 
         timers.append(
-            Timer.scheduledTimer(timeInterval: 1/20, target: self, selector: #selector(self.addDrop), userInfo: nil, repeats: true)
+            Timer.scheduledTimer(withTimeInterval: 1, repeats: true, block: { _ in
+                self.shouldAddDrop = true
+            })
         )
-        timers.append(
-            Timer.scheduledTimer(timeInterval: 1/120, target: self, selector: #selector(self.moveWaves), userInfo: nil, repeats: true)
-        )
-
-        timers.forEach { timer in
-            RunLoop.current.add(timer, forMode: .common)
-        }
     }
     
     func startCapture() async {
@@ -141,38 +140,30 @@ class MetalRenderer: NSObject, MTKViewDelegate {
         captureEngine.stopStream()
     }
 
-    @objc func addDrop() {
-        guard let commandBuffer = metalCommandQueue.makeCommandBuffer(),
-              let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-        else {
-            return
-        }
+    func encodeAddDrops(into commandBuffer: MTLCommandBuffer) {
+        guard let computeEncoder = commandBuffer.makeComputeCommandEncoder() else { return }
 
         computeEncoder.setComputePipelineState(addDropsComputePipelineState)
         computeEncoder.setTexture(rainTexture[activeRainTextureIndex], index: 0)
 
-        let randomX = UInt16.random(in: 0...UInt16(rainTextureSize.width))
-        let randomY = UInt16.random(in: 0...UInt16(rainTextureSize.height))
-        let randomRadius = UInt16.random(in: 1...30)
-        let randomStrength = UInt16.random(in: 8...12)
-        memcpy(dropletBuffer.contents(), [randomX, randomY, randomRadius, randomStrength], MemoryLayout<UInt16>.size * 4)
-
-        computeEncoder.setBuffer(dropletBuffer, offset: 0, index: 0)
+        let dropsPointer = dropletsBuffer.contents().bindMemory(to: UInt16.self, capacity: 4 * dropsPerPass)
+        for i in 0..<dropsPerPass {
+            dropsPointer[i * 4 + 0] = UInt16.random(in: 0..<UInt16(rainTextureSize.width)) // x
+            dropsPointer[i * 4 + 1] = UInt16.random(in: 0..<UInt16(rainTextureSize.height)) // y
+            dropsPointer[i * 4 + 2] = UInt16.random(in: 1...20) // radius
+            dropsPointer[i * 4 + 3] = UInt16.random(in: 8...32) // strength
+        }
+        computeEncoder.setBuffer(dropletsBuffer, offset: 0, index: 0)
 
         computeEncoder.dispatchThreadgroups(
             addDropThreadsConfig.threadgroupsPerGrid,
             threadsPerThreadgroup: addDropThreadsConfig.threadsPerThreadgroup)
 
         computeEncoder.endEncoding()
-        commandBuffer.commit()
     }
 
-    @objc func moveWaves() {
-        guard let commandBuffer = metalCommandQueue.makeCommandBuffer(),
-              let computeEncoder = commandBuffer.makeComputeCommandEncoder()
-        else {
-            return
-        }
+    func encodeMoveWaves(into commandBuffer: MTLCommandBuffer) {
+        guard let computeEncoder = commandBuffer.makeComputeCommandEncoder() else { return }
 
         computeEncoder.setComputePipelineState(moveWavesComputePipelineState)
 
@@ -184,7 +175,6 @@ class MetalRenderer: NSObject, MTKViewDelegate {
             threadsPerThreadgroup: moveWavesThreadsConfig.threadsPerThreadgroup)
 
         computeEncoder.endEncoding()
-        commandBuffer.commit()
 
         activeRainTextureIndex = 1 - activeRainTextureIndex
     }
@@ -192,25 +182,33 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
     }
 
+    @MainActor
     func draw(in view: MTKView) {
         guard imgTexture != nil,
               let rpd = view.currentRenderPassDescriptor,
-              let commandBuffer = metalCommandQueue.makeCommandBuffer(),
-              let re = commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
+              let drawable = view.currentDrawable,
+              let commandBuffer = metalCommandQueue.makeCommandBuffer()
         else {
             return
         }
+
+        encodeMoveWaves(into: commandBuffer)
+        if (shouldMoveWavesTwice) {
+            encodeMoveWaves(into: commandBuffer)
+        }
+        if shouldAddDrop {
+            encodeAddDrops(into: commandBuffer)
+            shouldAddDrop = false
+        }
         
+        guard let re = commandBuffer.makeRenderCommandEncoder(descriptor: rpd) else { return }
         re.setRenderPipelineState(pipelineState)
         re.setFragmentTexture(imgTexture, index: 0)
         re.setFragmentTexture(rainTexture[activeRainTextureIndex], index: 1)
-        re.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: 1)
-        
+        re.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         re.endEncoding()
-        
-        let drawable = view.currentDrawable!
+
         commandBuffer.commit()
-        commandBuffer.waitUntilScheduled()
         drawable.present()
     }
 

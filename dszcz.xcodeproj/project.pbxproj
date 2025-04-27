@@ -21,6 +21,7 @@
 /* Begin PBXFileReference section */
 		9A05D84F2C2897AA00D81007 /* CaptureEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureEngine.swift; sourceTree = "<group>"; };
 		9A77C7EC2DBD464100C0C27F /* OverlayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayState.swift; sourceTree = "<group>"; };
+		9A7F5D612DBE60B000EC9EF7 /* SharedConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedConfig.h; sourceTree = "<group>"; };
 		9A83D5542BEB4479000184AD /* dszcz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dszcz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A83D5572BEB4479000184AD /* dszczApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dszczApp.swift; sourceTree = "<group>"; };
 		9A83D55B2BEB447A000184AD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -68,6 +69,7 @@
 				9A05D84F2C2897AA00D81007 /* CaptureEngine.swift */,
 				9A83D5682BEB65C6000184AD /* MetalRenderer.swift */,
 				9AEE215B2C1F81CD00644D1C /* OverlayWindow.swift */,
+				9A7F5D612DBE60B000EC9EF7 /* SharedConfig.h */,
 				9A83D56A2BEB70C2000184AD /* Shaders.metal */,
 				9A83D55B2BEB447A000184AD /* Assets.xcassets */,
 				9A83D5602BEB447A000184AD /* dszcz.entitlements */,

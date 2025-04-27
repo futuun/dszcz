@@ -1,4 +1,5 @@
 #include <metal_stdlib>
+#include "SharedConfig.h"
 using namespace metal;
 
 vertex float4
@@ -41,30 +42,46 @@ fragmentShader(
 
 
 kernel void
-addDrop(
-        constant ushort4& dropConfig [[buffer(0)]],
-        texture2d<float, access::read_write> outTexture [[texture(0)]],
-        uint2 gid [[thread_position_in_grid]]
+addDrops(
+         constant ushort4* dropConfigs [[buffer(0)]],
+         texture2d<float, access::read_write> outTexture [[texture(0)]],
+         uint2 gid [[thread_position_in_grid]]
 ) {
-    if((gid.x >= outTexture.get_width()) || (gid.y >= outTexture.get_height())) {
+    if (gid.x >= outTexture.get_width() || gid.y >= outTexture.get_height()) {
         return;
     }
-    
-    ushort2 dropLocation = dropConfig.xy;
-    float dropRadius = dropConfig.z;
-    float dropStrength = float(dropConfig.w) / 1000;
 
     float4 currPixel = outTexture.read(gid);
-    float drop = max(0.0, 1.0 - (length(float2(gid) - float2(dropLocation)) / dropRadius));
-    drop = 1 - cos(drop * M_PI_F);
-    currPixel.r += drop * dropStrength;
+    float2 pixelPos = float2(gid);
+
+    for (uint i = 0; i < DROPS_PER_PASS; ++i) {
+        ushort2 dropLocation = dropConfigs[i].xy;
+        float dropRadius = dropConfigs[i].z;
+        float dropStrength = float(dropConfigs[i].w) / 1000.0;
+
+        // Early-out bounding box
+        if (abs(pixelPos.x - dropLocation.x) > dropRadius ||
+            abs(pixelPos.y - dropLocation.y) > dropRadius) {
+            continue;
+        }
+
+        float dist = length(pixelPos - float2(dropLocation));
+        if (dist > dropRadius) {
+            continue;
+        }
+
+        float drop = 1.0 - (dist / dropRadius);
+        drop = 1.0 - cos(drop * M_PI_F);
+        currPixel.r += drop * dropStrength;
+    }
 
     outTexture.write(currPixel, gid);
 }
 
 
 constant float damping = 0.995;
-
+constant uint2 dx = uint2(1, 0);
+constant uint2 dy = uint2(0, 1);
 kernel void
 moveWaves(
           texture2d<float, access::read> inTexture [[texture(0)]],
@@ -73,18 +90,14 @@ moveWaves(
 ) {
     float4 currPixel = outTexture.read(gid);
 
-    uint2 dx = uint2(1, 0);
-    uint2 dy = uint2(0, 1);
-
     float next = (
-                   inTexture.read(gid - dx).r +
-                   inTexture.read(gid + dx).r +
-                   inTexture.read(gid - dy).r +
-                   inTexture.read(gid + dy).r
+                   inTexture.read(gid - dx).r + // left
+                   inTexture.read(gid + dx).r + // right
+                   inTexture.read(gid - dy).r + // up
+                   inTexture.read(gid + dy).r   // down
     ) / 2 - currPixel.r;
-    next = next * damping;
 
-    currPixel.r = next;
-
+    currPixel.r = next * damping;
+    
     outTexture.write(currPixel, gid);
 }
