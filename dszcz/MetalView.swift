@@ -2,6 +2,8 @@ import MetalKit
 import SwiftUI
 
 struct MetalView: NSViewRepresentable {
+    @EnvironmentObject var overlayState: OverlayState
+
     let device = MTLCreateSystemDefaultDevice()
 
     public typealias NSViewType = MTKView

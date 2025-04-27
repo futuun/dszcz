@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		9A05D8502C2897AA00D81007 /* CaptureEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A05D84F2C2897AA00D81007 /* CaptureEngine.swift */; };
+		9A77C7ED2DBD464700C0C27F /* OverlayState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A77C7EC2DBD464100C0C27F /* OverlayState.swift */; };
 		9A83D5582BEB4479000184AD /* dszczApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A83D5572BEB4479000184AD /* dszczApp.swift */; };
 		9A83D55C2BEB447A000184AD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A83D55B2BEB447A000184AD /* Assets.xcassets */; };
 		9A83D55F2BEB447A000184AD /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A83D55E2BEB447A000184AD /* Preview Assets.xcassets */; };
@@ -19,6 +20,7 @@
 
 /* Begin PBXFileReference section */
 		9A05D84F2C2897AA00D81007 /* CaptureEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureEngine.swift; sourceTree = "<group>"; };
+		9A77C7EC2DBD464100C0C27F /* OverlayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayState.swift; sourceTree = "<group>"; };
 		9A83D5542BEB4479000184AD /* dszcz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dszcz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A83D5572BEB4479000184AD /* dszczApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dszczApp.swift; sourceTree = "<group>"; };
 		9A83D55B2BEB447A000184AD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -60,6 +62,7 @@
 		9A83D5562BEB4479000184AD /* dszcz */ = {
 			isa = PBXGroup;
 			children = (
+				9A77C7EC2DBD464100C0C27F /* OverlayState.swift */,
 				9A83D5572BEB4479000184AD /* dszczApp.swift */,
 				9A83D5662BEB658D000184AD /* MetalView.swift */,
 				9A05D84F2C2897AA00D81007 /* CaptureEngine.swift */,
@@ -151,6 +154,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9A77C7ED2DBD464700C0C27F /* OverlayState.swift in Sources */,
 				9A83D56B2BEB70C2000184AD /* Shaders.metal in Sources */,
 				9A83D5672BEB658D000184AD /* MetalView.swift in Sources */,
 				9A83D5582BEB4479000184AD /* dszczApp.swift in Sources */,
@@ -311,6 +315,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = ./dszcz/SharedConfig.h;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -341,6 +346,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = ./dszcz/SharedConfig.h;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

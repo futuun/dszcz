@@ -2,26 +2,27 @@ import SwiftUI
 
 @main
 struct rainApp: App {
+    @ObservedObject var permissions = AppPermissionsCheck()
+    @StateObject var overlayState = OverlayState()
     @State var window: NSWindow?
 
-    @State public var overlayOpen: Bool = false
-    @ObservedObject var permissions = AppPermissionsCheck()
-    
     var body: some Scene {
-        MenuBarExtra("Dszcz", systemImage: overlayOpen ? "cloud.rain": "cloud") {
+        MenuBarExtra(
+            "Dszcz",
+            systemImage: overlayState.overlayOpen ? "cloud.rain": "cloud"
+        ) {
             if permissions.canRecord {
                 Button("Toggle overlay") {
-                    if overlayOpen {
-                        self.window?.contentView = nil
-                        self.window?.close()
-                    } else {
+                    if !overlayState.overlayOpen {
                         let window = OverlayWindow()
-                        window.contentView = NSHostingView(rootView: MetalView())
-
+                        window.contentView = NSHostingView(
+                            rootView: MetalView()
+                                .environmentObject(overlayState)
+                        )
                         self.window = window
                     }
 
-                    overlayOpen.toggle()
+                    overlayState.overlayOpen.toggle()
                 }
             } else {
                 Text("No screen recording permission.")
@@ -30,7 +31,13 @@ struct rainApp: App {
             Button("Quit") {
                 NSApplication.shared.terminate(nil)
             }.keyboardShortcut("q")
-        }
+        }.onChange(of: overlayState.overlayOpen, { oldValue, newValue in
+            if !newValue {
+                self.window?.contentView = nil
+                self.window?.close()
+                self.window = nil
+            }
+        })
     }
 }
 
@@ -45,7 +52,7 @@ class AppPermissionsCheck: ObservableObject {
 
     func checkScreenRecordingPermissions() async {
         let canRecord = await CaptureEngine.canRecord
-        
+
         await MainActor.run {
             self.canRecord = canRecord
         }

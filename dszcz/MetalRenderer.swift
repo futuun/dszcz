@@ -11,6 +11,7 @@ struct ThreadDispatchConfig {
 }
 
 class MetalRenderer: NSObject, MTKViewDelegate {
+    var overlayState: OverlayState
     var metalDevice: MTLDevice!
     var metalCommandQueue: MTLCommandQueue!
     var pipelineState: MTLRenderPipelineState
@@ -30,9 +31,9 @@ class MetalRenderer: NSObject, MTKViewDelegate {
     var rainTextureSize: TextureSize
 
     var timers: [Timer] = []
-    private let videoSampleBufferQueue = DispatchQueue(label: "com.futuun.VideoSampleBufferQueue")
 
     init(_ parent: MetalView) {
+        self.overlayState = parent.overlayState
         self.metalDevice = parent.device
         self.metalCommandQueue = metalDevice.makeCommandQueue()!
 
@@ -118,8 +119,15 @@ class MetalRenderer: NSObject, MTKViewDelegate {
                 imgTexture = frame
             }
         } catch {
-            print("\(error.localizedDescription)")
+            print("err in start capture: \(error.localizedDescription)")
+            await self.cleanup()
         }
+    }
+
+    @MainActor
+    func cleanup() {
+        self.stopTimers()
+        overlayState.overlayOpen = false
     }
 
     func stopTimers() {

@@ -1,14 +1,15 @@
 import ScreenCaptureKit
 
-class CaptureEngine {
+class CaptureEngine: NSObject, @unchecked Sendable {
     private var videoSampleBufferQueue = DispatchQueue(label: "com.futuun.VideoSampleBufferQueue")
     private var streamOutput: CaptureEngineStreamOutput
     private var stream: SCStream?
+    public var isRunning: Bool = false
     
     init(metalDevice: MTLDevice) {
         streamOutput = CaptureEngineStreamOutput(metalDevice: metalDevice)
     }
-    
+
     private var streamFilter: SCContentFilter {
         get async {
             do {
@@ -57,21 +58,32 @@ class CaptureEngine {
         
         return AsyncThrowingStream<MTLTexture, Error> { continuation in
             streamOutput.continuation = continuation
-            
+
+            streamOutput.onError = { error in
+                self.isRunning = false
+                continuation.finish(throwing: error)
+                self.stream = nil
+            }
+
             do {
                 stream = SCStream(filter: filter, configuration: streamConfiguration, delegate: streamOutput)
                 
                 try stream?.addStreamOutput(streamOutput, type: .screen, sampleHandlerQueue: videoSampleBufferQueue)
                 stream?.startCapture()
+                isRunning = true
             } catch {
+                isRunning = false
                 continuation.finish(throwing: error)
             }
         }
     }
-    
+
     func stopStream() {
+        guard isRunning else { return }
+        
         stream?.stopCapture()
-        streamOutput.continuation?.finish()
+        isRunning = false
+        stream = nil
     }
     
     static var canRecord: Bool {
@@ -89,23 +101,25 @@ class CaptureEngine {
 private class CaptureEngineStreamOutput: NSObject, SCStreamDelegate, SCStreamOutput {
     private var textureCache: CVMetalTextureCache?
     public var continuation: AsyncThrowingStream<MTLTexture, Error>.Continuation?
+    var onError: ((Error) -> Void)?
     
     init(metalDevice: MTLDevice) {
         CVMetalTextureCacheCreate(nil, nil, metalDevice, nil, &textureCache)
     }
-    
+
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        if !sampleBuffer.isValid {
-            return
-        }
-        
-        if type == .screen {
-            guard let frame = handleLatestScreenSample(sampleBuffer: sampleBuffer) else { return }
-            continuation?.yield(frame)
-        }
+        guard sampleBuffer.isValid else { return }
+        guard type == .screen else { return }
+
+        guard let frame = handleLatestScreenSample(from: sampleBuffer) else { return }
+        continuation?.yield(frame)
     }
-    
-    func handleLatestScreenSample(sampleBuffer: CMSampleBuffer) -> MTLTexture? {
+
+    func stream(_ stream: SCStream, didStopWithError error: Error) {
+        onError?(error)
+    }
+
+    private func handleLatestScreenSample(from sampleBuffer: CMSampleBuffer) -> MTLTexture? {
         guard let imageBuffer = sampleBuffer.imageBuffer else {
             return nil
         }
@@ -129,9 +143,5 @@ private class CaptureEngineStreamOutput: NSObject, SCStreamDelegate, SCStreamOut
         }
         
         return nil;
-    }
-    
-    func stream(_ stream: SCStream, didStopWithError error: Error) {
-        continuation?.finish(throwing: error)
     }
 }
